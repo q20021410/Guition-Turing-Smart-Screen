@@ -1,14 +1,17 @@
 # Guition 3.5" IPS USB-C Smart Screen - Turing Monitor & Custom Firmware
 
-[한국어 안내 (README_KR.md)](README_KR.md) | **English**
+**English** | [한국어 안내 (README_KR.md)](README_KR.md)
 
 A standalone, portable system monitoring package and high-speed custom firmware for the **Guition 3.5" IPS USB Type-C Secondary Display**.
 
-Powered by an **80MHz SPI DMA** custom firmware and pre-compiled Windows binaries, this package lets you monitor CPU, GPU, RAM, temperatures, and network stats with **zero screen tearing, zero Python dependencies, and full support for modern AMD Ryzen (Zen 3 / Zen 4) & Intel CPUs**.
+Powered by an **80MHz SPI DMA** custom firmware and pre-compiled Windows binaries, this package lets you monitor CPU, GPU, RAM, temperatures, power draw, and network stats with **zero screen tearing, zero Python dependencies, and full support for both Intel Core & AMD Ryzen (Zen 3 / Zen 4) CPUs**.
 
 > [!NOTE]
 > **Upstream Project & Source**:
 > The PC system monitoring client in this project is based on the open-source project **[mathoudebine/turing-smart-screen-python](https://github.com/mathoudebine/turing-smart-screen-python)** by Matthieu Houdebine. It has been refactored and packaged to work seamlessly with the Guition 3.5" ESP32-C3 hardware and high-speed custom firmware.
+>
+> **Dedicated Firmware Repository**:
+> Custom ESP32-C3 firmware source and pre-built binaries are hosted at **[q20021410/Guition-ESP32-C3-Fimrware](https://github.com/q20021410/Guition-ESP32-C3-Fimrware)**.
 
 ---
 
@@ -19,7 +22,7 @@ Powered by an **80MHz SPI DMA** custom firmware and pre-compiled Windows binarie
 | 🖥️ Live Monitoring in Action (Landscape) | ⏳ Custom Firmware Standby Screen |
 | :---: | :---: |
 | <img src="img/after.jpg" height="340" alt="Guition 3.5 Monitor in Action" /> | <img src="img/standby.jpg" height="340" alt="Custom Firmware Standby Screen" /> |
-| **Real-Time System Monitoring (480x320 Landscape)**<br/><sub>Live AMD Ryzen CPU Package temp, clock, usage & RTX GPU metrics</sub> | **80MHz Custom Firmware Standby (320x480)**<br/><sub>ESP32-C3 SPI DMA firmware booted and awaiting PC serial connection</sub> |
+| **Real-Time System Monitoring (480x320 Landscape)**<br/><sub>Live CPU Package temp, clock, usage & RTX GPU metrics</sub> | **80MHz Custom Firmware Standby (320x480)**<br/><sub>ESP32-C3 SPI DMA firmware booted and awaiting PC serial connection</sub> |
 
 </div>
 
@@ -59,9 +62,9 @@ Powered by an **80MHz SPI DMA** custom firmware and pre-compiled Windows binarie
 > If `main.exe`, `GUITION Smart screen.exe`, Arduino IDE, or a serial monitor is currently running on the display's COM port, the flasher will fail with `PermissionError 13 (Access is denied)`. Always quit any monitoring software before flashing.
 
 > [!NOTE]
-> ### 4. Driver Privileges & Security
+> ### 4. Driver Privileges & Security (Intel & AMD)
 > * Right-click `1_Install_Driver_PawnIO.bat` and select **[Run as administrator]** once.
-> * Avoid older Turing screen packages using vulnerable drivers (`WinRing0.sys`). This project uses the Microsoft-signed **PawnIO** driver (`v2.2.0`), which is fully compatible with Windows 11 Core Isolation and Memory Integrity.
+> * Avoid older Turing screen packages using vulnerable drivers (`WinRing0.sys`). This project uses the Microsoft-signed **PawnIO** driver (`v2.2.0`), which is fully compatible with Windows 10/11 Core Isolation and Memory Integrity (HVCI) for both **Intel** and **AMD** CPUs.
 
 ---
 
@@ -83,13 +86,18 @@ Powered by an **80MHz SPI DMA** custom firmware and pre-compiled Windows binarie
 2. **High-Speed Custom Firmware (80MHz SPI DMA + 16KB Chunking)**
    * Eliminates USB CDC buffer overflow and diagonal tearing glitches.
    * Delivers smooth, artifact-free 320x480 full-frame rendering.
-3. **Safe AMD Ryzen & Intel Hardware Monitoring**
+3. **Safe Intel & AMD Hardware Monitoring via PawnIO**
    * Uses the Microsoft-signed **PawnIO** driver (`v2.2.0`) and updated **LibreHardwareMonitorLib**.
-   * Reliably reads AMD Ryzen SMU (Zen 3 5000 series, Zen 4 7000 series) and CPU Package temperatures without vulnerable legacy drivers.
-4. **73+ Themes & GUI Configuration**
+   * Reliably reads Intel Core & AMD Ryzen (Zen 3 5000 series, Zen 4 7000 series) CPU Package temperatures and power draw (W) under Windows 11 HVCI.
+4. **73+ Themes & New High-Density Theme (`LandscapePastelGirl`)**
+   * Non-intrusive left-side layout preserving character illustration.
+   * Real-time CPU & GPU Power draw (W).
+   * Real-time Network upload/download speed with directional arrows (▼ / ▲).
+   * Accurate C: drive storage gauge (Total, Used, Free).
+5. **GUI Configuration & Live Theme Editor**
    * Graphical settings wizard (`configure.exe`) with real-time theme previews.
    * Interactive theme editor (`theme-editor.exe`) with visual zone positioning and coordinate debugging.
-5. **100% Reversible Factory Restore**
+6. **100% Reversible Factory Restore**
    * Includes the original 4MB full raw flash dump (`Backup_Firmware.bin`). You can restore the factory stock firmware at any time.
 
 ---
@@ -110,14 +118,14 @@ You can flash the firmware directly inside your web browser without installing a
 
 *(Alternative: If you have Python & esptool installed, double-click `firmware/1_Flash_New_Firmware.bat`)*
 
-### 2. Install Hardware Sensor Driver (First time only)
+### 2. Install Hardware Sensor Driver (First time only - Intel & AMD)
 
 1. Right-click **`1_Install_Driver_PawnIO.bat`** and select **[Run as administrator]**.
-2. This installs the signed PawnIO kernel driver, unlocking direct AMD Ryzen SMU and CPU temperature sensors.
+2. This registers the signed PawnIO kernel driver, unlocking direct Intel and AMD Ryzen CPU temperature, power (W), and clock sensors under Windows 10/11.
 
 ### 3. Start System Monitoring
 
-* Double-click **`start_turing.bat`** (or `main.exe`).
+* Double-click **`main.exe`** (or `start_turing.bat`).
 * The monitor connects to the screen immediately and begins real-time performance display!
 
 ---
@@ -133,50 +141,26 @@ Double-click `configure.exe` to launch the graphical configuration wizard:
 ### Live Theme Editor (`theme-editor.exe`)
 * Double-click `theme-editor.exe` to open the real-time simulator.
 * Displays live coordinates when clicking or dragging on the screen preview.
-* Automatically reloads when editing theme configuration files (`theme.yaml`).
-
-### Manual Config (`config.yaml`)
-You can also edit `config.yaml` with any text editor:
-```yaml
-config:
-  COM_PORT: COM8          # Display COM port
-  THEME: LandscapeEarth   # Active theme folder name
-  HW_SENSORS: LHM         # LibreHardwareMonitor provider
-```
 
 ---
 
-## 🔄 Restoring Factory Stock Firmware
-
-If you ever wish to return to the original manufacturer firmware:
-1. Open **[https://esptool.spacehuhn.com/](https://esptool.spacehuhn.com/)** in Chrome/Edge.
-2. Click **[Connect]** and select the display COM port.
-3. Configure file and offset:
-   * **File**: `firmware/Backup_Firmware.bin`
-   * **Offset**: `0x0` *(IMPORTANT: Full 4MB dump must start at 0x0)*
-4. Click **[Program]**. The screen will be 100% restored to original factory condition.
-
----
-
-## 📁 Repository Structure
+## 📂 Project Structure
 
 ```text
-Guition Turing/
- ├── start_turing.bat              # Launcher batch script
- ├── main.exe                      # Standalone monitor application
- ├── configure.exe                 # GUI configuration & theme wizard
- ├── theme-editor.exe              # Live theme simulator & editor
- ├── 1_Install_Driver_PawnIO.bat   # Sensor driver installer script
- ├── PawnIO_setup.exe              # Microsoft-signed PawnIO driver installer
- ├── config.yaml                   # Application configuration file
- ├── README.md                     # English documentation
- ├── README_KR.md                  # Korean documentation
+Guition-Turing-Smart-Screen/
+ ├── main.exe                      # Standalone system monitor engine
+ ├── configure.exe                 # Graphical theme & COM port configuration wizard
+ ├── theme-editor.exe              # Visual theme editor & coordinate debugger
+ ├── start_turing.bat              # Helper launch batch file
+ ├── 1_Install_Driver_PawnIO.bat   # PawnIO kernel driver installer (Run as Admin)
+ ├── config.yaml                   # Active configuration file
+ ├── PawnIO_setup.exe              # Microsoft-signed PawnIO kernel driver installer
  │
- ├── firmware/                     # Firmware images and flasher tools
- │     ├── 0_Backup_Current_Firmware.bat # 1-Click factory backup script (0x0)
- │     ├── 1_Flash_New_Firmware.bat# Auto flasher script (0x10000)
- │     ├── 2_Restore_Backup_Firmware.bat # Factory restore script (0x0)
- │     ├── new_Firmware.bin        # 80MHz SPI DMA high-speed firmware (0x10000)
+ ├── firmware/                     # Firmware tools & pre-built binaries
+ │     ├── 0_Backup_Current_Firmware.bat # Factory flash dump backup script (0x0)
+ │     ├── 1_Flash_New_Firmware.bat      # High-speed firmware flasher script (0x10000)
+ │     ├── 2_Restore_Backup_Firmware.bat # Factory stock restore script (0x0)
+ │     ├── new_Firmware.bin        # 80MHz SPI DMA custom firmware binary (0x10000)
  │     ├── Backup_Firmware.bin     # Original 4MB factory raw flash backup (0x0)
  │     ├── Web_Flasher_Shortcut.url# Web flasher browser shortcut
  │     └── README_Firmware_Guide.txt# Detailed firmware guide
@@ -205,7 +189,7 @@ This project builds upon and integrates several outstanding open-source projects
 ### 2. Hardware Sensors & Driver Architecture
 | Component | Author / Source | Role & Description | License |
 | :--- | :--- | :--- | :--- |
-| **PawnIO** | [@namazso](https://github.com/namazso/PawnIO) | Microsoft-signed kernel driver replacing vulnerable `WinRing0.sys` for secure Ryzen SMU access | GPL-3.0 |
+| **PawnIO** | [@namazso](https://github.com/namazso/PawnIO) | Microsoft-signed kernel driver replacing vulnerable `WinRing0.sys` for secure Intel/AMD sensor access | GPL-3.0 |
 | **LibreHardwareMonitor** | [LibreHardwareMonitor Team](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) | Core Windows sensor library for CPU, GPU, RAM, disk, and motherboard monitoring | MPL-2.0 |
 | **pythonnet** | [Python.NET Community](https://github.com/pythonnet/pythonnet) | C# .NET CLR runtime bridge enabling Python to call LibreHardwareMonitorLib | MIT |
 
