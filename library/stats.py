@@ -34,6 +34,7 @@ from typing import List
 import babel.dates
 import requests
 from ping3 import ping
+import psutil
 from psutil._common import bytes2human
 from uptime import uptime
 
@@ -42,6 +43,16 @@ from library.display import display
 from library.log import logger
 
 DEFAULT_HISTORY_SIZE = 10
+
+
+def safe_int(value, default: int = 0) -> int:
+    try:
+        if value is None or (isinstance(value, float) and (math.isnan(value) or math.isinf(value))):
+            return default
+        return int(round(float(value)))
+    except Exception:
+        return default
+
 
 ETH_CARD = config.CONFIG_DATA["config"].get("ETH", "")
 WLO_CARD = config.CONFIG_DATA["config"].get("WLO", "")
@@ -124,7 +135,7 @@ def display_themed_value(theme_data, value, min_size=0, unit=''):
 def display_themed_percent_value(theme_data, value):
     display_themed_value(
         theme_data=theme_data,
-        value=int(value),
+        value=safe_int(value),
         min_size=3,
         unit="%"
     )
@@ -133,7 +144,7 @@ def display_themed_percent_value(theme_data, value):
 def display_themed_temperature_value(theme_data, value):
     display_themed_value(
         theme_data=theme_data,
-        value=int(value),
+        value=safe_int(value),
         min_size=3,
         unit="°C"
     )
@@ -148,7 +159,7 @@ def display_themed_progress_bar(theme_data, value):
         y=theme_data.get("Y", 0),
         width=theme_data.get("WIDTH", 0),
         height=theme_data.get("HEIGHT", 0),
-        value=int(value),
+        value=safe_int(value),
         min_value=theme_data.get("MIN_VALUE", 0),
         max_value=theme_data.get("MAX_VALUE", 100),
         bar_color=theme_data.get("BAR_COLOR", (0, 0, 0)),
@@ -162,6 +173,9 @@ def display_themed_progress_bar(theme_data, value):
 def display_themed_radial_bar(theme_data, value, min_size=0, unit='', custom_text=None):
     if not theme_data.get("SHOW", False):
         return
+
+    if value is None or (isinstance(value, float) and (math.isnan(value) or math.isinf(value))):
+        value = 0
 
     if theme_data.get("SHOW_TEXT", False):
         if custom_text:
@@ -204,7 +218,7 @@ def display_themed_radial_bar(theme_data, value, min_size=0, unit='', custom_tex
 def display_themed_percent_radial_bar(theme_data, value):
     display_themed_radial_bar(
         theme_data=theme_data,
-        value=int(value),
+        value=safe_int(value),
         unit="%",
         min_size=3
     )
@@ -213,7 +227,7 @@ def display_themed_percent_radial_bar(theme_data, value):
 def display_themed_temperature_radial_bar(theme_data, value):
     display_themed_radial_bar(
         theme_data=theme_data,
-        value=int(value),
+        value=safe_int(value),
         min_size=3,
         unit="°C"
     )
@@ -272,6 +286,14 @@ class CPU:
         cpu_percentage = sensors.Cpu.percentage(
             interval=theme_data.get("INTERVAL", None)
         )
+        if cpu_percentage is None or (isinstance(cpu_percentage, float) and math.isnan(cpu_percentage)):
+            try:
+                cpu_percentage = float(psutil.cpu_percent(interval=None))
+            except Exception:
+                cpu_percentage = 0.0
+            if math.isnan(cpu_percentage):
+                cpu_percentage = 0.0
+
         save_last_value(cpu_percentage, cls.last_values_cpu_percentage,
                         theme_data['LINE_GRAPH'].get("HISTORY_SIZE", DEFAULT_HISTORY_SIZE))
         # logger.debug(f"CPU Percentage: {cpu_percentage}")

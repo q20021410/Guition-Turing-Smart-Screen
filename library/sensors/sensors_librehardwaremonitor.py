@@ -179,13 +179,27 @@ class Cpu(sensors.Cpu):
     @staticmethod
     def percentage(interval: float) -> float:
         cpu = get_hw_and_update(Hardware.HardwareType.Cpu)
-        for sensor in cpu.Sensors:
-            if sensor.SensorType == Hardware.SensorType.Load and str(sensor.Name).startswith(
-                    "CPU Total") and sensor.Value is not None:
-                return float(sensor.Value)
+        if cpu:
+            try:
+                for sensor in cpu.Sensors:
+                    if sensor.SensorType == Hardware.SensorType.Load and str(sensor.Name).startswith(
+                            "CPU Total") and sensor.Value is not None:
+                        val = float(sensor.Value)
+                        if not math.isnan(val):
+                            return val
+            except Exception:
+                pass
+
+        # Fallback to psutil - 100% reliable on Windows without Admin rights
+        try:
+            val = float(psutil.cpu_percent(interval=None))
+            if not math.isnan(val):
+                return val
+        except Exception:
+            pass
 
         logger.error("CPU load cannot be read")
-        return math.nan
+        return 0.0
 
     @staticmethod
     def frequency() -> float:
