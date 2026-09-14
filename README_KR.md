@@ -12,7 +12,7 @@
 > 80MHz SPI DMA 커스텀 펌웨어 소스코드, 빌드된 `.bin` 바이너리 및 웹 플래셔 가이드는 **[q20021410/Guition-ESP32-C3-Fimrware](https://github.com/q20021410/Guition-ESP32-C3-Fimrware)** 전용 저장소에 분리 보관되어 있습니다.
 >
 > 📦 **무설치 포터블 배포판**:
-> 파이썬 설치 없이 다운로드 후 바로 사용할 수 있는 단독 실행 바이너리는 **[Guition.Turing.zip 다운로드 (v1.0.0)](https://github.com/q20021410/Guition-Turing-Smart-Screen/releases/latest)** 에서 받으실 수 있습니다.
+> 파이썬 설치 없이 다운로드 후 바로 사용할 수 있는 단독 실행 바이너리는 **[Guition.Turing.zip 다운로드 (v1.0.1)](https://github.com/q20021410/Guition-Turing-Smart-Screen/releases/latest)** 에서 받으실 수 있습니다.
 
 ---
 

@@ -12,7 +12,7 @@ Open-source PC system monitor software and custom firmware integration for the *
 > Custom ESP32-C3 firmware source, pre-compiled `.bin` files, and Web Flasher instructions are hosted at **[q20021410/Guition-ESP32-C3-Fimrware](https://github.com/q20021410/Guition-ESP32-C3-Fimrware)**.
 >
 > 📦 **Pre-compiled Releases**:
-> Download standalone Windows executables (no Python needed) at **[Guition.Turing.zip (v1.0.0)](https://github.com/q20021410/Guition-Turing-Smart-Screen/releases/latest)**.
+> Download standalone Windows executables (no Python needed) at **[Guition.Turing.zip (v1.0.1)](https://github.com/q20021410/Guition-Turing-Smart-Screen/releases/latest)**.
 
 ---
 
