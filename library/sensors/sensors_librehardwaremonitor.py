@@ -38,11 +38,18 @@ import library.sensors.sensors as sensors
 from library.log import logger
 
 # Import LibreHardwareMonitor dll to Python
-lhm_dll = os.getcwd() + '\\external\\LibreHardwareMonitor\\LibreHardwareMonitorLib.dll'
-# noinspection PyUnresolvedReferences
+if getattr(sys, 'frozen', False):
+    _base_dir = os.path.dirname(sys.executable)
+else:
+    _base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+lhm_dir = os.path.join(_base_dir, 'external', 'LibreHardwareMonitor')
+if not os.path.exists(lhm_dir):
+    lhm_dir = os.path.join(os.getcwd(), 'external', 'LibreHardwareMonitor')
+
+lhm_dll = os.path.join(lhm_dir, 'LibreHardwareMonitorLib.dll')
 clr.AddReference(lhm_dll)
-# noinspection PyUnresolvedReferences
-clr.AddReference(os.getcwd() + '\\external\\LibreHardwareMonitor\\HidSharp.dll')
+clr.AddReference(os.path.join(lhm_dir, 'HidSharp.dll'))
 # noinspection PyUnresolvedReferences
 from LibreHardwareMonitor import Hardware
 
@@ -56,13 +63,7 @@ logger.debug("Found LibreHardwareMonitorLib %s" % ".".join([str(HIWORD(ms_file_v
                                                             str(LOWORD(ls_file_version))]))
 
 if ctypes.windll.shell32.IsUserAnAdmin() == 0:
-    logger.error(
-        "Program is not running as administrator. Please run with admin rights or choose another HW_SENSORS option in "
-        "config.yaml")
-    try:
-        sys.exit(0)
-    except:
-        os._exit(0)
+    logger.warning("Program is not running as administrator. Run as administrator to enable full CPU temperature readings.")
 
 handle = Hardware.Computer()
 handle.IsCpuEnabled = True
@@ -71,7 +72,7 @@ handle.IsMemoryEnabled = True
 handle.IsMotherboardEnabled = True  # For CPU Fan Speed
 handle.IsControllerEnabled = True  # For CPU Fan Speed
 handle.IsNetworkEnabled = True
-handle.IsStorageEnabled = True
+handle.IsStorageEnabled = False
 handle.IsPsuEnabled = False
 handle.Open()
 for hardware in handle.Hardware:
@@ -196,15 +197,34 @@ class Cpu(sensors.Cpu):
                     # Keep only real core clocks, ignore effective core clocks
                     if "Core #" in str(sensor.Name) and "Effective" not in str(
                             sensor.Name) and sensor.Value is not None:
-                        frequencies.append(float(sensor.Value))
+                        val = float(sensor.Value)
+                        if val > 0:
+                            frequencies.append(val)
 
             if frequencies:
-                # Take mean of all core clock as "CPU clock" (as it is done in Windows Task Manager Performance tab)
+                # Take mean of all core clock as "CPU clock"
                 return mean(frequencies)
         except:
             pass
 
-        # Frequencies reading is not supported on this CPU
+        # Fallback 1: check "Cores (Average)" or other clock sensors in LHM
+        try:
+            for sensor in cpu.Sensors:
+                if sensor.SensorType == Hardware.SensorType.Clock and "Average" in str(sensor.Name) and sensor.Value is not None:
+                    val = float(sensor.Value)
+                    if val > 0:
+                        return val
+        except:
+            pass
+
+        # Fallback 2: psutil.cpu_freq() (works 100% on Windows without Admin rights)
+        try:
+            freq = psutil.cpu_freq()
+            if freq and freq.current and freq.current > 0:
+                return float(freq.current)
+        except:
+            pass
+
         return math.nan
 
     @staticmethod
@@ -214,28 +234,65 @@ class Cpu(sensors.Cpu):
 
     @staticmethod
     def temperature() -> float:
+        # 1. Check AIDA64 Shared Memory (Highest accuracy, supports all Ryzen AGESA versions)
+        try:
+            import mmap
+            import xml.etree.ElementTree as ET
+            shm = mmap.mmap(-1, 0x20000, "AIDA64_SensorValues", mmap.ACCESS_READ)
+            raw = shm.read().split(b'\x00')[0].decode('utf-8', errors='ignore')
+            if raw and "<temp>" in raw:
+                root = ET.fromstring(f"<root>{raw}</root>")
+                # Priority IDs: TCPUDIO (Die), TCPU (CPU), TCC1 (CCD1)
+                for target_id in ["TCPUDIO", "TCPU", "TCC1", "TCC2"]:
+                    for elem in root.findall("temp"):
+                        if elem.findtext("id", "") == target_id:
+                            val = float(elem.findtext("val", "0"))
+                            if val > 0:
+                                return val
+                # Any CPU temp
+                for elem in root.findall("temp"):
+                    label = elem.findtext("label", "").lower()
+                    if "cpu" in label:
+                        val = float(elem.findtext("val", "0"))
+                        if val > 0:
+                            return val
+        except Exception:
+            pass
+
+        # 2. Search LibreHardwareMonitor CPU sensors
         cpu = get_hw_and_update(Hardware.HardwareType.Cpu)
         try:
-            # By default, the average temperature of all CPU cores will be used
+            for keyword in ["Tctl", "Tdie", "Core Average", "Core Max", "CPU Package", "Package", "Core"]:
+                for sensor in cpu.Sensors:
+                    if sensor.SensorType == Hardware.SensorType.Temperature and sensor.Value is not None:
+                        val = float(sensor.Value)
+                        if val > 0 and keyword.lower() in str(sensor.Name).lower():
+                            return val
+
             for sensor in cpu.Sensors:
-                if sensor.SensorType == Hardware.SensorType.Temperature and str(sensor.Name).startswith(
-                        "Core Average") and sensor.Value is not None:
-                    return float(sensor.Value)
-            # If not available, the max core temperature will be used
-            for sensor in cpu.Sensors:
-                if sensor.SensorType == Hardware.SensorType.Temperature and str(sensor.Name).startswith(
-                        "Core Max") and sensor.Value is not None:
-                    return float(sensor.Value)
-            # If not available, the CPU Package temperature (usually same as max core temperature) will be used
-            for sensor in cpu.Sensors:
-                if sensor.SensorType == Hardware.SensorType.Temperature and str(sensor.Name).startswith(
-                        "CPU Package") and sensor.Value is not None:
-                    return float(sensor.Value)
-            # Otherwise any sensor named "Core..." will be used
-            for sensor in cpu.Sensors:
-                if sensor.SensorType == Hardware.SensorType.Temperature and str(sensor.Name).startswith(
-                        "Core") and sensor.Value is not None:
-                    return float(sensor.Value)
+                if sensor.SensorType == Hardware.SensorType.Temperature and sensor.Value is not None:
+                    val = float(sensor.Value)
+                    if val > 0:
+                        return val
+        except:
+            pass
+
+        # 3. Fallback to Motherboard CPU sensor
+        try:
+            mb = get_hw_and_update(Hardware.HardwareType.Motherboard)
+            if mb:
+                for sensor in mb.Sensors:
+                    if sensor.SensorType == Hardware.SensorType.Temperature and sensor.Value is not None:
+                        val = float(sensor.Value)
+                        if val > 0 and "cpu" in str(sensor.Name).lower():
+                            return val
+                for sub in mb.SubHardware:
+                    sub.Update()
+                    for sensor in sub.Sensors:
+                        if sensor.SensorType == Hardware.SensorType.Temperature and sensor.Value is not None:
+                            val = float(sensor.Value)
+                            if val > 0 and "cpu" in str(sensor.Name).lower():
+                                return val
         except:
             pass
 
@@ -257,6 +314,43 @@ class Cpu(sensors.Cpu):
         # No Fan Speed sensor for this CPU model
         return math.nan
 
+    @staticmethod
+    def power() -> float:
+        # 1. Check AIDA64 Shared Memory
+        try:
+            import mmap
+            import xml.etree.ElementTree as ET
+            shm = mmap.mmap(-1, 0x20000, "AIDA64_SensorValues", mmap.ACCESS_READ)
+            raw = shm.read().split(b'\x00')[0].decode('utf-8', errors='ignore')
+            if raw and "<pwr>" in raw:
+                root = ET.fromstring(f"<root>{raw}</root>")
+                for target_id in ["PCPUPKG", "PCPUDIO", "PCPU"]:
+                    for elem in root.findall("pwr"):
+                        if elem.findtext("id", "") == target_id:
+                            val = float(elem.findtext("val", "0"))
+                            if val > 0:
+                                return val
+        except Exception:
+            pass
+
+        # 2. Check LHM
+        try:
+            cpu = get_hw_and_update(Hardware.HardwareType.Cpu)
+            if cpu:
+                for s in cpu.Sensors:
+                    if s.SensorType == Hardware.SensorType.Power and s.Value is not None:
+                        val = float(s.Value)
+                        if val > 0 and ("package" in str(s.Name).lower() or "total" in str(s.Name).lower() or "cpu" in str(s.Name).lower()):
+                            return val
+                for s in cpu.Sensors:
+                    if s.SensorType == Hardware.SensorType.Power and s.Value is not None:
+                        val = float(s.Value)
+                        if val > 0:
+                            return val
+        except Exception:
+            pass
+        return math.nan
+
 
 class Gpu(sensors.Gpu):
     # GPU to use is detected once, and its name is saved for future sensors readings
@@ -268,6 +362,8 @@ class Gpu(sensors.Gpu):
     # Get GPU to use for sensors, and update it
     @classmethod
     def get_gpu_to_use(cls):
+        if not cls.gpu_name:
+            cls.gpu_name = get_gpu_name()
         gpu_to_use = get_hw_and_update(Hardware.HardwareType.GpuAmd, cls.gpu_name)
         if gpu_to_use is None:
             gpu_to_use = get_hw_and_update(Hardware.HardwareType.GpuNvidia, cls.gpu_name)
@@ -374,6 +470,20 @@ class Gpu(sensors.Gpu):
         return math.nan
 
     @classmethod
+    def power(cls) -> float:
+        try:
+            gpu_to_use = cls.get_gpu_to_use()
+            if gpu_to_use:
+                for s in gpu_to_use.Sensors:
+                    if s.SensorType == Hardware.SensorType.Power and s.Value is not None:
+                        val = float(s.Value)
+                        if val > 0:
+                            return val
+        except Exception:
+            pass
+        return math.nan
+
+    @classmethod
     def is_available(cls) -> bool:
         cls.gpu_name = get_gpu_name()
         return bool(cls.gpu_name)
@@ -450,20 +560,33 @@ class Memory(sensors.Memory):
         return 0
 
 
+def _get_disk_path():
+    try:
+        import library.config as config
+        configured = config.CONFIG_DATA["config"].get("DISK_DRIVE", "")
+        if configured:
+            return configured
+    except Exception:
+        pass
+    if sys.platform == "win32":
+        return os.environ.get('SystemDrive', 'C:') + '\\'
+    return "/"
+
+
 # NOTE: all disk data are fetched from psutil Python library, because LHM does not have it.
 # This is because LHM is a hardware-oriented library, whereas used/free/total space is for partitions, not disks
 class Disk(sensors.Disk):
     @staticmethod
     def disk_usage_percent() -> float:
-        return psutil.disk_usage("/").percent
+        return psutil.disk_usage(_get_disk_path()).percent
 
     @staticmethod
     def disk_used() -> int:  # In bytes
-        return psutil.disk_usage("/").used
+        return psutil.disk_usage(_get_disk_path()).used
 
     @staticmethod
     def disk_free() -> int:  # In bytes
-        return psutil.disk_usage("/").free
+        return psutil.disk_usage(_get_disk_path()).free
 
 
 class Net(sensors.Net):

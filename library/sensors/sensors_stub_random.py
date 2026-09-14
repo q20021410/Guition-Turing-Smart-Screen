@@ -50,6 +50,10 @@ class Cpu(sensors.Cpu):
     def fan_percent(fan_name: str = None) -> float:
         return random.uniform(0, 100)
 
+    @staticmethod
+    def power() -> float:
+        return random.uniform(35, 125)
+
 
 class Gpu(sensors.Gpu):
     @staticmethod
@@ -69,6 +73,10 @@ class Gpu(sensors.Gpu):
     @staticmethod
     def frequency() -> float:
         return random.uniform(800, 3400)
+
+    @staticmethod
+    def power() -> float:
+        return random.uniform(50, 250)
 
     @staticmethod
     def is_available() -> bool:

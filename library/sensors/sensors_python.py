@@ -22,6 +22,7 @@
 # For all platforms (Linux, Windows, macOS) but not all HW is supported
 
 import math
+import os
 import platform
 import sys
 from collections import namedtuple
@@ -451,25 +452,38 @@ class Memory(sensors.Memory):
             return -1
 
 
+def _get_disk_path():
+    try:
+        import library.config as config
+        configured = config.CONFIG_DATA["config"].get("DISK_DRIVE", "")
+        if configured:
+            return configured
+    except Exception:
+        pass
+    if sys.platform == "win32":
+        return os.environ.get('SystemDrive', 'C:') + '\\'
+    return "/"
+
+
 class Disk(sensors.Disk):
     @staticmethod
     def disk_usage_percent() -> float:
         try:
-            return psutil.disk_usage("/").percent
+            return psutil.disk_usage(_get_disk_path()).percent
         except:
             return math.nan
 
     @staticmethod
     def disk_used() -> int:  # In bytes
         try:
-            return psutil.disk_usage("/").used
+            return psutil.disk_usage(_get_disk_path()).used
         except:
             return -1
 
     @staticmethod
     def disk_free() -> int:  # In bytes
         try:
-            return psutil.disk_usage("/").free
+            return psutil.disk_usage(_get_disk_path()).free
         except:
             return -1
 

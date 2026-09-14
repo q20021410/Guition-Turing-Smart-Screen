@@ -53,6 +53,16 @@ STATS:
         SHOW: False
       LINE_GRAPH:
         SHOW: False
+    POWER:
+      INTERVAL: 0
+      TEXT:
+        SHOW: False
+      GRAPH:
+        SHOW: False
+      RADIAL:
+        SHOW: False
+      LINE_GRAPH:
+        SHOW: False
   GPU:
     INTERVAL: 0
     PERCENTAGE:
@@ -114,6 +124,15 @@ STATS:
       LINE_GRAPH:
         SHOW: False
     FREQUENCY:
+      TEXT:
+        SHOW: False
+      GRAPH:
+        SHOW: False
+      RADIAL:
+        SHOW: False
+      LINE_GRAPH:
+        SHOW: False
+    POWER:
       TEXT:
         SHOW: False
       GRAPH:

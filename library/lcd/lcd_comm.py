@@ -72,7 +72,7 @@ class LcdComm(ABC):
 
         # Mutex to protect the queue in case a thread want to add multiple requests (e.g. image data) that should not be
         # mixed with other requests in-between
-        self.update_queue_mutex = threading.Lock()
+        self.update_queue_mutex = threading.RLock()
 
         # Create a cache to store opened images, to avoid opening and loading from the filesystem every time
         self.image_cache = {}  # { key=path, value=PIL.Image }
@@ -120,7 +120,7 @@ class LcdComm(ABC):
                 logger.debug(f"Static COM port: {com_port}")
 
             try:
-                self.lcd_serial = serial.Serial(com_port, 115200, timeout=1, rtscts=True)
+                self.lcd_serial = serial.Serial(com_port, 115200, timeout=1, rtscts=False, dsrdtr=False)
                 return
             except Exception as e:
                 logger.warning(
@@ -141,7 +141,19 @@ class LcdComm(ABC):
 
     def serial_write(self, data: bytes):
         assert self.lcd_serial is not None
-        self.lcd_serial.write(data)
+        chunk_sz = 16384
+        if len(data) > 6 and data[5] == 197:
+            # Send 6-byte header first so firmware reads header cleanly
+            self.lcd_serial.write(data[:6])
+            pixel_data = data[6:]
+            for i in range(0, len(pixel_data), chunk_sz):
+                self.lcd_serial.write(pixel_data[i:i+chunk_sz])
+                time.sleep(0.020)
+        else:
+            for i in range(0, len(data), chunk_sz):
+                self.lcd_serial.write(data[i:i+chunk_sz])
+                if len(data) > chunk_sz:
+                    time.sleep(0.020)
 
     def serial_read(self, size: int) -> bytes:
         assert self.lcd_serial is not None

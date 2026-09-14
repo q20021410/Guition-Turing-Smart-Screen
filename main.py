@@ -47,6 +47,39 @@ try:
         import win32api
         import win32con
         import win32gui
+        import ctypes
+
+        def _is_admin():
+            try:
+                return ctypes.windll.shell32.IsUserAnAdmin() != 0
+            except:
+                return False
+
+        if not _is_admin() and '--no-admin' not in sys.argv:
+            try:
+                if getattr(sys, 'frozen', False):
+                    params = " ".join([f'"{arg}"' for arg in sys.argv[1:]])
+                else:
+                    params = " ".join([f'"{arg}"' for arg in sys.argv])
+                ret = ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, params, None, 1)
+                if ret > 32:
+                    sys.exit(0)
+            except Exception:
+                pass
+        elif _is_admin():
+            try:
+                import winreg
+                try:
+                    winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PawnIO")
+                except FileNotFoundError:
+                    setup_exe = Path(__file__).resolve().parent / "PawnIO_setup.exe"
+                    if not setup_exe.exists():
+                        setup_exe = Path(__file__).resolve().parent.parent / "PawnIO_setup.exe"
+                    if setup_exe.exists():
+                        subprocess.run([str(setup_exe), "-install", "-silent"], capture_output=True)
+            except Exception:
+                pass
+
 
     from library.log import logger
     import library.scheduler as scheduler
@@ -68,7 +101,10 @@ except:
     # If pystray cannot be loaded do not stop the program, just ignore it. The tray icon will not be displayed.
     pass
 
-MAIN_DIRECTORY = Path(__file__).resolve().parent
+if getattr(sys, 'frozen', False):
+    MAIN_DIRECTORY = Path(sys.executable).resolve().parent
+else:
+    MAIN_DIRECTORY = Path(__file__).resolve().parent
 DELAY_BETWEEN_THREADS = 0.25
 
 if __name__ == "__main__":
@@ -243,6 +279,7 @@ if __name__ == "__main__":
         scheduler.CPULoad(); time.sleep(DELAY_BETWEEN_THREADS)
         scheduler.CPUTemperature(); time.sleep(DELAY_BETWEEN_THREADS)
         scheduler.CPUFanSpeed(); time.sleep(DELAY_BETWEEN_THREADS)
+        scheduler.CPUPower(); time.sleep(DELAY_BETWEEN_THREADS)
         if stats.Gpu.is_available():
             scheduler.GpuStats(); time.sleep(DELAY_BETWEEN_THREADS)
         scheduler.MemoryStats(); time.sleep(DELAY_BETWEEN_THREADS)
@@ -263,6 +300,7 @@ if __name__ == "__main__":
             stats.CPU.load()
             stats.CPU.temperature()
             stats.CPU.fan_speed()
+            stats.CPU.power()
             stats.Gpu.stats()
             stats.Memory.stats()
             stats.Disk.stats()

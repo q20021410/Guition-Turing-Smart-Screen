@@ -173,7 +173,11 @@ class LcdCommRevA(LcdComm):
         byteBuffer[8] = (width & 255)
         byteBuffer[9] = (height >> 8)
         byteBuffer[10] = (height & 255)
-        self.serial_write(bytes(byteBuffer))
+        if self.update_queue:
+            with self.update_queue_mutex:
+                self.update_queue.put((self.WriteLine, [bytes(byteBuffer)]))
+        else:
+            self.serial_write(bytes(byteBuffer))
 
     def DisplayPILImage(
             self,
@@ -210,10 +214,15 @@ class LcdCommRevA(LcdComm):
 
         rgb565le = image_to_RGB565(image, "little")
 
-        self.SendCommand(Command.DISPLAY_BITMAP, x0, y0, x1, y1)
+        header = bytearray(6)
+        header[0] = (x0 >> 2)
+        header[1] = (((x0 & 3) << 6) + (y0 >> 4))
+        header[2] = (((y0 & 15) << 4) + (x1 >> 6))
+        header[3] = (((x1 & 63) << 2) + (y1 >> 8))
+        header[4] = (y1 & 255)
+        header[5] = Command.DISPLAY_BITMAP
 
-        # Lock queue mutex then queue all the requests for the image data
+        packet = bytes(header) + rgb565le
+
         with self.update_queue_mutex:
-            # Send image data by multiple of "display width" bytes
-            for chunk in chunked(rgb565le, width * 8):
-                self.SendLine(chunk)
+            self.SendLine(packet)

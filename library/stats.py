@@ -264,6 +264,7 @@ class CPU:
     last_values_cpu_temperature = []
     last_values_cpu_fan_speed = []
     last_values_cpu_frequency = []
+    last_values_cpu_power = []
 
     @classmethod
     def percentage(cls):
@@ -327,13 +328,6 @@ class CPU:
 
         if math.isnan(temperature):
             temperature = 0
-            if cpu_temp_text_data['SHOW'] or cpu_temp_radial_data['SHOW'] or cpu_temp_graph_data[
-                'SHOW'] or cpu_temp_line_graph_data['SHOW']:
-                logger.warning("Your CPU temperature is not supported yet")
-                cpu_temp_text_data['SHOW'] = False
-                cpu_temp_radial_data['SHOW'] = False
-                cpu_temp_graph_data['SHOW'] = False
-                cpu_temp_line_graph_data['SHOW'] = False
 
         display_themed_temperature_value(cpu_temp_text_data, temperature)
         display_themed_progress_bar(cpu_temp_graph_data, temperature)
@@ -374,6 +368,25 @@ class CPU:
         display_themed_percent_radial_bar(cpu_fan_radial_data, fan_percent)
         display_themed_line_graph(cpu_fan_line_graph_data, cls.last_values_cpu_fan_speed)
 
+    @classmethod
+    def power(cls):
+        theme_data = config.THEME_DATA['STATS']['CPU'].get('POWER', {})
+        cpu_power = sensors.Cpu.power()
+        if math.isnan(cpu_power):
+            cpu_power = 0
+        save_last_value(cpu_power, cls.last_values_cpu_power,
+                        theme_data.get('LINE_GRAPH', {}).get("HISTORY_SIZE", DEFAULT_HISTORY_SIZE))
+
+        display_themed_value(
+            theme_data=theme_data.get('TEXT', {}),
+            value=f"{cpu_power:.0f}",
+            unit=" W",
+            min_size=3
+        )
+        display_themed_progress_bar(theme_data.get('GRAPH', {}), cpu_power)
+        display_themed_radial_bar(theme_data.get('RADIAL', {}), int(round(cpu_power)), unit=" W", min_size=3)
+        display_themed_line_graph(theme_data.get('LINE_GRAPH', {}), cls.last_values_cpu_power)
+
 
 class Gpu:
     last_values_gpu_percentage = []
@@ -382,6 +395,7 @@ class Gpu:
     last_values_gpu_fps = []
     last_values_gpu_fan_speed = []
     last_values_gpu_frequency = []
+    last_values_gpu_power = []
 
     @classmethod
     def stats(cls):
@@ -404,6 +418,11 @@ class Gpu:
                         theme_gpu_data['FAN_SPEED']['LINE_GRAPH'].get("HISTORY_SIZE", DEFAULT_HISTORY_SIZE))
         save_last_value(freq_ghz, cls.last_values_gpu_frequency,
                         theme_gpu_data['FREQUENCY']['LINE_GRAPH'].get("HISTORY_SIZE", DEFAULT_HISTORY_SIZE))
+        power_val = sensors.Gpu.power()
+        if math.isnan(power_val):
+            power_val = 0
+        save_last_value(power_val, cls.last_values_gpu_power,
+                        theme_gpu_data.get('POWER', {}).get('LINE_GRAPH', {}).get("HISTORY_SIZE", DEFAULT_HISTORY_SIZE))
 
         ################################ for backward compatibility only
         gpu_mem_graph_data = theme_gpu_data['MEMORY']['GRAPH']
@@ -596,6 +615,27 @@ class Gpu:
         )
         display_themed_line_graph(gpu_freq_line_graph_data, cls.last_values_gpu_frequency)
 
+        # GPU Power (W)
+        if 'POWER' in theme_gpu_data:
+            gpu_power_text_data = theme_gpu_data['POWER'].get('TEXT', {})
+            gpu_power_radial_data = theme_gpu_data['POWER'].get('RADIAL', {})
+            gpu_power_graph_data = theme_gpu_data['POWER'].get('GRAPH', {})
+            gpu_power_line_graph_data = theme_gpu_data['POWER'].get('LINE_GRAPH', {})
+            display_themed_value(
+                theme_data=gpu_power_text_data,
+                value=f'{power_val:.0f}',
+                unit=" W",
+                min_size=3
+            )
+            display_themed_progress_bar(gpu_power_graph_data, power_val)
+            display_themed_radial_bar(
+                theme_data=gpu_power_radial_data,
+                value=int(round(power_val)),
+                unit=" W",
+                min_size=3
+            )
+            display_themed_line_graph(gpu_power_line_graph_data, cls.last_values_gpu_power)
+
     @staticmethod
     def is_available():
         return sensors.Gpu.is_available()
@@ -722,17 +762,25 @@ class Net:
 
     @staticmethod
     def _show_themed_total_data(theme_data, amount):
+        val_str = bytes2human(amount, '%(value).1f %(symbol)s')
+        if not val_str.endswith('B'):
+            val_str += 'B'
         display_themed_value(
             theme_data=theme_data,
-            value=f"{bytes2human(amount)}",
-            min_size=6
+            value=val_str,
+            min_size=7
         )
 
     @staticmethod
     def _show_themed_tax_rate(theme_data, rate):
+        val_str = bytes2human(rate, '%(value).1f %(symbol)s')
+        if val_str.endswith('B'):
+            formatted_val = f"{val_str}/s"
+        else:
+            formatted_val = f"{val_str}B/s"
         display_themed_value(
             theme_data=theme_data,
-            value=f"{bytes2human(rate, '%(value).1f %(symbol)s/s')}",
+            value=formatted_val,
             min_size=10
         )
 

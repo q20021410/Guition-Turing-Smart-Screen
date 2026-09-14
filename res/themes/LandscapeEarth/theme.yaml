@@ -127,7 +127,7 @@ STATS:
         FONT: generale-mono/GeneraleMonoA.ttf
         FONT_SIZE: 26
         FONT_COLOR: 255, 255, 255
-        BACKGROUND_COLOR: 16, 24, 49
-        WIDTH: 115  # Increase to 160 if you need the time to cover the star (e.g. am/pm indicator) 
+        BACKGROUND_IMAGE: background.png
+        WIDTH: 170
         HEIGHT: 30
         ANCHOR: lm

@@ -121,6 +121,14 @@ def CPUFanSpeed():
     stats.CPU.fan_speed()
 
 
+@async_job("CPU_Power")
+@schedule(timedelta(seconds=config.THEME_DATA['STATS']['CPU'].get('POWER', {}).get("INTERVAL", 0)).total_seconds())
+def CPUPower():
+    """ Refresh the CPU Power """
+    # logger.debug("Refresh CPU Power")
+    stats.CPU.power()
+
+
 @async_job("GPU_Stats")
 @schedule(timedelta(seconds=config.THEME_DATA['STATS'].get('GPU', {}).get("INTERVAL", 0)).total_seconds())
 def GpuStats():
@@ -188,17 +196,19 @@ def PingStats():
 @async_job("Queue_Handler")
 @schedule(timedelta(milliseconds=1).total_seconds())
 def QueueHandler():
-    # Do next action waiting in the queue
-    if STOPPING:
-        # Empty the action queue to allow program to exit cleanly
-        while not config.update_queue.empty():
-            f, args = config.update_queue.get()
-            f(*args)
-    else:
-        # Execute first action in the queue
-        f, args = config.update_queue.get()
-        if f:
-            f(*args)
+    # Empty all waiting actions in the queue immediately
+    while not config.update_queue.empty():
+        try:
+            item = config.update_queue.get_nowait()
+            if item:
+                f, args = item
+                if f:
+                    f(*args)
+        except queue.Empty:
+            break
+        except Exception as e:
+            logger.error(f"Error in QueueHandler: {e}")
+            break
 
 
 def is_queue_empty() -> bool:

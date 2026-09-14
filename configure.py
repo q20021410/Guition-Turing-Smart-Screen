@@ -47,10 +47,9 @@ try:
     from tktooltip import ToolTip
 
 except Exception as e:
-    print("""Import error: %s
-Please follow start guide to install required packages: https://github.com/mathoudebine/turing-smart-screen-python/wiki/System-monitor-:-how-to-start
-Or the troubleshooting page: https://github.com/mathoudebine/turing-smart-screen-python/wiki/Troubleshooting#all-os-tkinter-dependency-not-installed""" % str(
-        e))
+    with open("configure_import_error.txt", "w", encoding="utf-8") as f:
+        import traceback
+        traceback.print_exc(file=f)
     try:
         sys.exit(0)
     except:
@@ -167,7 +166,10 @@ weather_lang_map = {"sq": "Albanian", "af": "Afrikaans", "ar": "Arabic", "az": "
                     "sk": "Slovak", "sl": "Slovenian", "sp": "Spanish", "sv": "Swedish", "th": "Thai", "tr": "Turkish",
                     "ua": "Ukrainian", "vi": "Vietnamese", "zu": "Zulu"}
 
-MAIN_DIRECTORY = Path(__file__).resolve().parent
+if getattr(sys, 'frozen', False):
+    MAIN_DIRECTORY = Path(sys.executable).resolve().parent
+else:
+    MAIN_DIRECTORY = Path(__file__).resolve().parent
 THEMES_DIR = MAIN_DIRECTORY / "res/themes"
 VERSION_FILE = MAIN_DIRECTORY / "version.txt"
 

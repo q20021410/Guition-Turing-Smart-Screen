@@ -44,18 +44,6 @@ except:
     except:
         os._exit(0)
 
-if len(sys.argv) != 2:
-    print("Usage :")
-    print("        theme-editor.py theme-name")
-    print("Examples : ")
-    print("        theme-editor.py 3.5inchTheme2")
-    print("        theme-editor.py Landscape6Grid")
-    print("        theme-editor.py Cyberpunk")
-    try:
-        sys.exit(0)
-    except:
-        os._exit(0)
-
 import library.log
 
 library.log.logger.setLevel(logging.NOTSET)  # Disable system monitor logging for the editor
@@ -67,8 +55,13 @@ logger.setLevel(logging.DEBUG)
 # Hardcode specific configuration for theme editor
 from library import config
 
+if len(sys.argv) > 1:
+    selected_theme = sys.argv[1]
+else:
+    selected_theme = config.CONFIG_DATA.get("config", {}).get("THEME", "LandscapeEarth")
+
 config.CONFIG_DATA["config"]["HW_SENSORS"] = "STATIC"  # For theme editor always use stub data
-config.CONFIG_DATA["config"]["THEME"] = sys.argv[1]  # Theme is given as argument
+config.CONFIG_DATA["config"]["THEME"] = selected_theme  # Theme is given as argument or default
 
 config.load_theme()
 
@@ -82,7 +75,7 @@ RGB_LED_MARGIN = 12
 # Resize editor if display is too big (e.g. 8.8" displays are 1920x480), can be changed later by zoom buttons
 RESIZE_FACTOR = 2 if (display.lcd.get_width() > 1000 or display.lcd.get_height() > 1000) else 1
 
-ERROR_IN_THEME = Image.open("res/docs/error-in-theme.png")
+ERROR_IN_THEME = Image.open(config.MAIN_DIRECTORY / "res/docs/error-in-theme.png")
 
 
 def refresh_theme():
@@ -252,11 +245,11 @@ if __name__ == "__main__":
     logger.debug("Opening theme file in your default editor. If it does not work, open it manually in the "
                  "editor of your choice")
     if platform.system() == 'Darwin':  # macOS
-        subprocess.call(('open', config.MAIN_DIRECTORY / theme_file))
+        subprocess.call(('open', str(theme_file)))
     elif platform.system() == 'Windows':  # Windows
-        os.startfile(config.MAIN_DIRECTORY / theme_file)
+        os.startfile(str(theme_file))
     else:  # linux variants
-        subprocess.call(('xdg-open', config.MAIN_DIRECTORY / theme_file))
+        subprocess.call(('xdg-open', str(theme_file)))
 
     # Load theme file and generate first preview
     try:
