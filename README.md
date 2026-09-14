@@ -2,13 +2,17 @@
 
 **English** | [한국어 안내 (README_KR.md)](README_KR.md)
 
-Open-source PC system monitor software for the **Guition 3.5" IPS USB Type-C Secondary Display** (ESP32-C3 + ST7796).
+Open-source PC system monitor software and custom firmware integration for the **Guition 3.5" IPS USB Type-C Secondary Display**.
 
-> ⚡ **Firmware Repository**: **[q20021410/Guition-ESP32-C3-Fimrware](https://github.com/q20021410/Guition-ESP32-C3-Fimrware)**  
-> Looking for ESP32-C3 80MHz SPI DMA firmware source, pre-compiled `.bin` files, or Web Flasher instructions? Visit the dedicated firmware repository.
+> [!NOTE]
+> **Upstream Project & Source**:
+> The PC system monitoring client in this project is based on the open-source project **[mathoudebine/turing-smart-screen-python](https://github.com/mathoudebine/turing-smart-screen-python)** by Matthieu Houdebine. It has been customized and packaged to work seamlessly with the Guition 3.5" ESP32-C3 hardware and high-speed custom firmware.
 >
-> 📦 **Pre-compiled Releases**: **[Download Guition.Turing.zip (v1.0.0)](https://github.com/q20021410/Guition-Turing-Smart-Screen/releases/latest)**  
-> Run immediately without installing Python or any dependencies.
+> ⚡ **Dedicated Firmware Repository**:
+> Custom ESP32-C3 firmware source, pre-compiled `.bin` files, and Web Flasher instructions are hosted at **[q20021410/Guition-ESP32-C3-Fimrware](https://github.com/q20021410/Guition-ESP32-C3-Fimrware)**.
+>
+> 📦 **Pre-compiled Releases**:
+> Download standalone Windows executables (no Python needed) at **[Guition.Turing.zip (v1.0.0)](https://github.com/q20021410/Guition-Turing-Smart-Screen/releases/latest)**.
 
 ---
 
@@ -26,6 +30,49 @@ Open-source PC system monitor software for the **Guition 3.5" IPS USB Type-C Sec
 <p align="center">
   <img src="img/config.png" width="80%" alt="GUI Configuration Wizard" />
 </p>
+
+---
+
+## 🛒 Product Information & Hardware Verification (제품 구매처 및 확인용)
+
+To verify that your display hardware matches this software and firmware:
+
+* **Device**: Guition 3.5" IPS USB-C Secondary Monitor / Smart Screen
+* **Controller**: ESP32-C3 (RISC-V single-core @ 160MHz, 4MB Flash)
+* **Display Panel**: 3.5-inch IPS LCD (320x480 native resolution, ST7796S driver)
+* **Connectivity**: Single USB Type-C cable (Power + High-speed Serial)
+* **Purchase Link**: [AliExpress - Guition 3.5" IPS USB Secondary Screen](https://aliexpress.com/item/1005006622935422.html)
+* **Upstream Discussion**: [mathoudebine/turing-smart-screen-python#426](https://github.com/mathoudebine/turing-smart-screen-python/issues/426)
+
+---
+
+## ⚠️ Important Precautions (사용상 주의사항)
+
+> [!CAUTION]
+> ### 1. Backup Your Original Factory Firmware First!
+> While this repository includes a clean 4MB factory flash dump (`firmware/Backup_Firmware.bin`), slight hardware revisions from AliExpress batches may occur.
+> **We strongly recommend backing up your device's current 4MB flash before flashing new firmware!**
+> - **1-Click Backup**: If Python & esptool are installed, double-click `firmware/0_Backup_Current_Firmware.bat`.
+> - **Manual Command**:
+>   ```bash
+>   esptool --chip esp32c3 --port COM8 --baud 921600 read_flash 0x0 0x400000 My_Original_Backup.bin
+>   ```
+
+> [!WARNING]
+> ### 2. Strictly Follow Flash Offset Addresses (Prevent Bricking)
+> * **New Custom Firmware (`new_Firmware.bin`)**: Must be flashed at offset **`0x10000`**!
+>   * *Never flash `new_Firmware.bin` at `0x0`, as that would overwrite the ESP32-C3 bootloader and partition tables.*
+> * **Factory Restore Image (`Backup_Firmware.bin`)**: Must be flashed at offset **`0x0`**!
+>   * *Because it is a full 4MB raw dump of the entire flash memory.*
+
+> [!IMPORTANT]
+> ### 3. Close All Serial Monitor Programs Before Flashing (Avoid Access Denied)
+> If `main.exe`, `GUITION Smart screen.exe`, Arduino IDE, or a serial terminal is currently running on the display's COM port, flashing will fail with `PermissionError 13 (Access is denied)`. Always close all monitoring software before flashing.
+
+> [!NOTE]
+> ### 4. Kernel Driver Privileges (Intel & AMD)
+> * Right-click `1_Install_Driver_PawnIO.bat` and select **[Run as administrator]** once.
+> * This project uses the Microsoft-signed **PawnIO** driver (`v2.2.0`) instead of vulnerable `WinRing0.sys`. It is fully compatible with Windows 10/11 Core Isolation and Memory Integrity (HVCI) for both **Intel** and **AMD** CPUs.
 
 ---
 
@@ -48,7 +95,7 @@ Open-source PC system monitor software for the **Guition 3.5" IPS USB Type-C Sec
 ### Option 1: Standalone Windows Executable (Recommended)
 
 1. Download **`Guition.Turing.zip`** from [Releases](https://github.com/q20021410/Guition-Turing-Smart-Screen/releases/latest) and extract.
-2. (First time only) Right-click **`1_Install_Driver_PawnIO.bat`** and select **Run as administrator** to enable CPU temperature and power sensors.
+2. (First time only) Right-click **`1_Install_Driver_PawnIO.bat`** and select **Run as administrator** to enable CPU temperature and power sensors for Intel & AMD.
 3. Run **`main.exe`** (or `start_turing.bat`).
 
 ### Option 2: Run from Python Source
@@ -70,7 +117,7 @@ python main.py
 
 ---
 
-## 📂 Program Directory Structure
+## 📁 Program Directory Structure (프로그램 폴더 구조)
 
 ```text
 Guition-Turing-Smart-Screen/
@@ -106,8 +153,9 @@ Guition-Turing-Smart-Screen/
  │     └── LibreHardwareMonitor/   # LibreHardwareMonitorLib.dll & dependencies
  │
  ├── firmware/                     # Firmware flasher utilities & binaries
- │     ├── 1_Flash_New_Firmware.bat# One-click firmware flashing script
- │     ├── 2_Restore_Backup_Firmware.bat # Stock factory restore script
+ │     ├── 0_Backup_Current_Firmware.bat # Factory flash dump backup script (0x0)
+ │     ├── 1_Flash_New_Firmware.bat      # High-speed firmware flasher script (0x10000)
+ │     ├── 2_Restore_Backup_Firmware.bat # Stock factory restore script (0x0)
  │     ├── new_Firmware.bin        # Pre-built 80MHz SPI DMA firmware (0x10000)
  │     └── Backup_Firmware.bin     # Stock 4MB factory flash backup (0x0)
  │
@@ -120,6 +168,6 @@ Guition-Turing-Smart-Screen/
 ## 📚 Credits & License
 
 - **Upstream Project**: Based on [mathoudebine/turing-smart-screen-python](https://github.com/mathoudebine/turing-smart-screen-python) by Matthieu Houdebine (GPL-3.0).
-- **Firmware**: [Guition-ESP32-C3-Fimrware](https://github.com/q20021410/Guition-ESP32-C3-Fimrware) powered by [LovyanGFX](https://github.com/lovyan03/LovyanGFX).
+- **Firmware Repository**: [Guition-ESP32-C3-Fimrware](https://github.com/q20021410/Guition-ESP32-C3-Fimrware) powered by [LovyanGFX](https://github.com/lovyan03/LovyanGFX).
 - **Hardware Sensors**: [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) & [PawnIO](https://github.com/namazso/PawnIO).
 - **License**: GNU General Public License v3.0 ([GPL-3.0](LICENSE)).

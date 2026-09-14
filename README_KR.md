@@ -2,13 +2,17 @@
 
 [English (README.md)](README.md) | **한국어**
 
-**Guition 3.5인치 IPS USB Type-C 보조 모니터**(ESP32-C3 + ST7796)를 위한 오픈소스 PC 시스템 모니터링 소프트웨어입니다.
+**Guition 3.5인치 IPS USB Type-C 보조 모니터**(ESP32-C3 + ST7796)를 위한 오픈소스 PC 시스템 모니터링 소프트웨어 및 커스텀 펌웨어 패키지입니다.
 
-> ⚡ **전용 펌웨어 저장소**: **[q20021410/Guition-ESP32-C3-Fimrware](https://github.com/q20021410/Guition-ESP32-C3-Fimrware)**  
-> 80MHz SPI DMA 커스텀 펌웨어 소스코드, 빌드된 `.bin` 바이너리 및 웹 플래셔 가이드는 전용 펌웨어 저장소를 방문하세요.
+> [!NOTE]
+> **프로젝트 원 출처 안내 (Upstream Project)**:
+> 본 패키지의 PC 시스템 모니터링 프로그램 원 출처는 **[mathoudebine/turing-smart-screen-python](https://github.com/mathoudebine/turing-smart-screen-python)** (원작자: Matthieu Houdebine) 오픈소스 프로젝트입니다. Guition 3.5인치 ESP32-C3 하드웨어 호환 및 80MHz 고속 통신 최적화를 거쳐 구성되었습니다.
 >
-> 📦 **무설치 포터블 배포판**: **[Guition.Turing.zip 다운로드 (v1.0.0)](https://github.com/q20021410/Guition-Turing-Smart-Screen/releases/latest)**  
-> 파이썬 설치 없이 다운로드 후 바로 실행할 수 있는 Windows 전용 패키지입니다.
+> ⚡ **전용 펌웨어 저장소**:
+> 80MHz SPI DMA 커스텀 펌웨어 소스코드, 빌드된 `.bin` 바이너리 및 웹 플래셔 가이드는 **[q20021410/Guition-ESP32-C3-Fimrware](https://github.com/q20021410/Guition-ESP32-C3-Fimrware)** 전용 저장소에 분리 보관되어 있습니다.
+>
+> 📦 **무설치 포터블 배포판**:
+> 파이썬 설치 없이 다운로드 후 바로 사용할 수 있는 단독 실행 바이너리는 **[Guition.Turing.zip 다운로드 (v1.0.0)](https://github.com/q20021410/Guition-Turing-Smart-Screen/releases/latest)** 에서 받으실 수 있습니다.
 
 ---
 
@@ -29,10 +33,53 @@
 
 ---
 
+## 🛒 제품 정보 및 구매처 (기기 모델 확인용)
+
+보유하신 하드웨어가 본 프로젝트의 소프트웨어 및 펌웨어와 일치하는지 확인하세요:
+
+* **기기명**: Guition 3.5" IPS USB-C 스마트 보조 모니터
+* **컨트롤러**: ESP32-C3 (RISC-V 싱글코어 160MHz, 4MB Flash)
+* **액정 패널**: 3.5인치 IPS LCD (320x480 해상도, ST7796 드라이버)
+* **연결 방식**: 단일 USB Type-C 케이블 (전원 공급 + 고속 시리얼 통신)
+* **알리익스프레스 구매 링크**: [AliExpress - Guition 3.5" IPS USB Secondary Screen](https://aliexpress.com/item/1005006622935422.html)
+* **원작 저장소 이슈 토론**: [mathoudebine/turing-smart-screen-python#426](https://github.com/mathoudebine/turing-smart-screen-python/issues/426)
+
+---
+
+## ⚠️ 사용상 주의사항 및 작업 전 필수 경고
+
+> [!CAUTION]
+> ### 1. 작업 전 순정 펌웨어 백업 필수 권장 (안전장치)
+> 본 저장소에는 출고 순정 4MB 풀 덤프(`firmware/Backup_Firmware.bin`)가 기본 포함되어 있으나, 알리익스프레스 제조 시기 및 패널 리비전에 따라 미세한 하드웨어 차이가 있을 수 있습니다.
+> **따라서 새로운 펌웨어를 올리기 전에 현재 본인 기기의 4MB 펌웨어를 먼저 백업해 두는 것을 강력히 권장합니다.**
+> - **1클릭 자동 백업**: Python 및 esptool 환경이 있는 경우 `firmware/0_Backup_Current_Firmware.bat` 실행
+> - **수동 명령어**:
+>   ```bash
+>   esptool --chip esp32c3 --port COM8 --baud 921600 read_flash 0x0 0x400000 My_Original_Backup.bin
+>   ```
+
+> [!WARNING]
+> ### 2. 플래싱 주소(Offset) 엄격 준수 (벽돌 방지)
+> * **새 커스텀 펌웨어 (`new_Firmware.bin`)**: 반드시 **`0x10000`** 주소에 플래싱해야 합니다!
+>   * *절대로 `0x0`에 쓰지 마세요. `0x0`에 덮어쓰면 ESP32-C3 부트로더 및 파티션 테이블이 손상됩니다.*
+> * **순정 백업 펌웨어 복원 (`Backup_Firmware.bin`)**: 반드시 **`0x0`** 주소에 플래싱해야 합니다!
+>   * *4MB 플래시 전체 덤프 파일이므로 0번지부터 덮어써야 원래대로 복원됩니다.*
+
+> [!IMPORTANT]
+> ### 3. 플래싱 전 실행 중인 모니터 프로그램 종료 (`액세스 거부 방지`)
+> `main.exe`나 순정 제조사 프로그램(`GUITION Smart screen.exe`), 아두이노 IDE, 시리얼 모니터 등이 화면 포트를 사용 중인 상태에서는 웹 플래셔 연결 시 `PermissionError 13 (액세스가 거부되었습니다)` 에러가 발생합니다. 플래싱 작업 전에는 모니터 프로그램을 완전히 종료하세요.
+
+> [!NOTE]
+> ### 4. 커널 드라이버 권한 안내 (Intel & AMD 공통)
+> * `1_Install_Driver_PawnIO.bat` 파일을 우클릭하여 **[관리자 권한으로 실행]**하여 최초 1회 드라이버를 등록합니다.
+> * 보안 취약점이 있는 구형 `WinRing0.sys` 대신 마이크로소프트 정식 서명된 **PawnIO** 커널 드라이버(`v2.2.0`)를 사용하여 윈도우 10/11 메모리 무결성(HVCI) 환경에서도 인텔 및 AMD 라이젠 CPU의 온도, 소비전력(W), 전압을 안전하게 수집합니다.
+
+---
+
 ## ✨ 주요 특징
 
 - **Guition 3.5" ST7796 완벽 지원**: 80MHz SPI DMA 커스텀 펌웨어에 맞춤 최적화되어 화면 찢김(Tearing) 및 지연 현상이 없습니다.
-- **인텔 & AMD 라이젠 최신 하드웨어 모니터링**: 마이크로소프트 정식 서명된 **PawnIO** 커널 드라이버(`v2.2.0`)와 **LibreHardwareMonitorLib** 탑재로 윈도우 10/11 메모리 무결성(HVCI) 환경에서도 안전하게 센서를 수집합니다.
+- **인텔 & AMD 라이젠 최신 하드웨어 모니터링**: 서명된 PawnIO 커널 드라이버와 LibreHardwareMonitorLib 탑재로 최신 프로세서 완벽 지원.
 - **신규 고밀도 테마 (`LandscapePastelGirl`) 탑재**:
   - 우측 캐릭터 일러스트를 전혀 가리지 않는 좌측 정보 패널 레이아웃
   - 실시간 CPU & GPU 소비전력 (PWR W) 표시
@@ -106,6 +153,7 @@ Guition-Turing-Smart-Screen/
  │     └── LibreHardwareMonitor/   # LibreHardwareMonitorLib.dll 및 종속 DLL
  │
  ├── firmware/                     # 펌웨어 플래시 도구 및 바이너리
+ │     ├── 0_Backup_Current_Firmware.bat # 공장 출고 4MB 백업 배치파일
  │     ├── 1_Flash_New_Firmware.bat# 80MHz 고속 펌웨어 원클릭 플래시 스크립트
  │     ├── 2_Restore_Backup_Firmware.bat # 순정 복원 스크립트
  │     ├── new_Firmware.bin        # 80MHz SPI DMA 커스텀 펌웨어 바이너리 (0x10000)
