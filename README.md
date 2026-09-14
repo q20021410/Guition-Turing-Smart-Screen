@@ -1,6 +1,6 @@
 # Guition 3.5" IPS USB-C Smart Screen - PC Monitor Software
 
-**English** | [한국어 안내 (README_KR.md)](README_KR.md)
+**English** | [Korean (README_KR.md)](README_KR.md)
 
 Open-source PC system monitor software and custom firmware integration for the **Guition 3.5" IPS USB Type-C Secondary Display**.
 
@@ -33,7 +33,7 @@ Open-source PC system monitor software and custom firmware integration for the *
 
 ---
 
-## 🛒 Product Information & Hardware Verification (제품 구매처 및 확인용)
+## 🛒 Product Information & Hardware Verification
 
 To verify that your display hardware matches this software and firmware:
 
@@ -46,7 +46,7 @@ To verify that your display hardware matches this software and firmware:
 
 ---
 
-## ⚠️ Important Precautions (사용상 주의사항)
+## ⚠️ Important Precautions
 
 > [!CAUTION]
 > ### 1. Backup Your Original Factory Firmware First!
@@ -117,7 +117,7 @@ python main.py
 
 ---
 
-## 📁 Program Directory Structure (프로그램 폴더 구조)
+## 📁 Program Directory Structure
 
 ```text
 Guition-Turing-Smart-Screen/
