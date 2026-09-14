@@ -394,8 +394,8 @@ class CPU:
     def power(cls):
         theme_data = config.THEME_DATA['STATS']['CPU'].get('POWER', {})
         cpu_power = sensors.Cpu.power()
-        if math.isnan(cpu_power):
-            cpu_power = 0
+        if cpu_power is None or (isinstance(cpu_power, float) and (math.isnan(cpu_power) or math.isinf(cpu_power))):
+            cpu_power = 0.0
         save_last_value(cpu_power, cls.last_values_cpu_power,
                         theme_data.get('LINE_GRAPH', {}).get("HISTORY_SIZE", DEFAULT_HISTORY_SIZE))
 
@@ -406,7 +406,7 @@ class CPU:
             min_size=3
         )
         display_themed_progress_bar(theme_data.get('GRAPH', {}), cpu_power)
-        display_themed_radial_bar(theme_data.get('RADIAL', {}), int(round(cpu_power)), unit=" W", min_size=3)
+        display_themed_radial_bar(theme_data.get('RADIAL', {}), safe_int(cpu_power), unit=" W", min_size=3)
         display_themed_line_graph(theme_data.get('LINE_GRAPH', {}), cls.last_values_cpu_power)
 
 
@@ -457,7 +457,7 @@ class Gpu:
                 gpu_mem_radial_data['SHOW'] = False
 
         gpu_mem_text_data = theme_gpu_data['MEMORY']['TEXT']
-        if math.isnan(memory_used_mb):
+        if memory_used_mb is None or (isinstance(memory_used_mb, float) and math.isnan(memory_used_mb)):
             memory_used_mb = 0
             if gpu_mem_text_data['SHOW']:
                 logger.warning("Your GPU memory absolute usage (M) is not supported yet")
@@ -467,7 +467,7 @@ class Gpu:
         display_themed_percent_radial_bar(gpu_mem_radial_data, memory_percentage)
         display_themed_value(
             theme_data=gpu_mem_text_data,
-            value=int(memory_used_mb),
+            value=safe_int(memory_used_mb),
             min_size=5,
             unit=" M"
         )
@@ -516,7 +516,7 @@ class Gpu:
 
         # GPU mem. absolute usage (M)
         gpu_mem_used_text_data = theme_gpu_data['MEMORY_USED']['TEXT']
-        if math.isnan(memory_used_mb):
+        if memory_used_mb is None or (isinstance(memory_used_mb, float) and math.isnan(memory_used_mb)):
             memory_used_mb = 0
             if gpu_mem_used_text_data['SHOW']:
                 logger.warning("Your GPU memory absolute usage (M) is not supported yet")
@@ -524,14 +524,14 @@ class Gpu:
 
         display_themed_value(
             theme_data=gpu_mem_used_text_data,
-            value=int(memory_used_mb),
+            value=safe_int(memory_used_mb),
             min_size=5,
             unit=" M"
         )
 
         # GPU mem. total memory (M)
         gpu_mem_total_text_data = theme_gpu_data['MEMORY_TOTAL']['TEXT']
-        if math.isnan(total_memory_mb):
+        if total_memory_mb is None or (isinstance(total_memory_mb, float) and math.isnan(total_memory_mb)):
             total_memory_mb = 0
             if gpu_mem_total_text_data['SHOW']:
                 logger.warning("Your GPU total memory capacity (M) is not supported yet")
@@ -539,7 +539,7 @@ class Gpu:
 
         display_themed_value(
             theme_data=gpu_mem_total_text_data,
-            value=int(total_memory_mb),
+            value=safe_int(total_memory_mb),
             min_size=5,  # Adjust min_size as necessary for your display
             unit=" M"  # Assuming the unit is in Megabytes
         )
@@ -584,13 +584,13 @@ class Gpu:
         display_themed_progress_bar(gpu_fps_graph_data, fps)
         display_themed_value(
             theme_data=gpu_fps_text_data,
-            value=int(fps),
+            value=safe_int(fps),
             min_size=4,
             unit=" FPS"
         )
         display_themed_radial_bar(
             theme_data=gpu_fps_radial_data,
-            value=int(fps),
+            value=safe_int(fps),
             min_size=4,
             unit=" FPS"
         )
@@ -652,7 +652,7 @@ class Gpu:
             display_themed_progress_bar(gpu_power_graph_data, power_val)
             display_themed_radial_bar(
                 theme_data=gpu_power_radial_data,
-                value=int(round(power_val)),
+                value=safe_int(power_val),
                 unit=" W",
                 min_size=3
             )
@@ -688,19 +688,19 @@ class Memory:
 
         display_themed_value(
             theme_data=memory_stats_theme_data['VIRTUAL']['USED'],
-            value=int(sensors.Memory.virtual_used() / 1024 ** 2),
+            value=safe_int(sensors.Memory.virtual_used() / 1024 ** 2),
             min_size=5,
             unit=" M"
         )
         display_themed_value(
             theme_data=memory_stats_theme_data['VIRTUAL']['FREE'],
-            value=int(sensors.Memory.virtual_free() / 1024 ** 2),
+            value=safe_int(sensors.Memory.virtual_free() / 1024 ** 2),
             min_size=5,
             unit=" M"
         )
         display_themed_value(
             theme_data=memory_stats_theme_data['VIRTUAL']['TOTAL'],
-            value=int((sensors.Memory.virtual_free() + sensors.Memory.virtual_used()) / 1024 ** 2),
+            value=safe_int((sensors.Memory.virtual_free() + sensors.Memory.virtual_used()) / 1024 ** 2),
             min_size=5,
             unit=" M"
         )
@@ -726,19 +726,19 @@ class Disk:
 
         display_themed_value(
             theme_data=disk_theme_data['USED']['TEXT'],
-            value=int(used / 1000000000),
+            value=safe_int(used / 1000000000),
             min_size=5,
             unit=" G"
         )
         display_themed_value(
             theme_data=disk_theme_data['TOTAL']['TEXT'],
-            value=int((free + used) / 1000000000),
+            value=safe_int((free + used) / 1000000000),
             min_size=5,
             unit=" G"
         )
         display_themed_value(
             theme_data=disk_theme_data['FREE']['TEXT'],
-            value=int(free / 1000000000),
+            value=safe_int(free / 1000000000),
             min_size=5,
             unit=" G"
         )
@@ -851,7 +851,10 @@ class SystemUptime:
             # For static or stubbed sensors, use predefined uptime
             uptimesec = 4294036
         else:
-            uptimesec = int(uptime())
+            try:
+                uptimesec = safe_int(uptime(), default=0)
+            except Exception:
+                uptimesec = 0
 
         uptimeformatted = str(datetime.timedelta(seconds=uptimesec))
 
@@ -1002,22 +1005,31 @@ class Ping:
             # For stub sensors, use random ping delay
             delay = random.randint(5, 120)
         else:
-            delay = ping(dest_addr=PING_DEST, unit="ms")
+            try:
+                delay = ping(dest_addr=PING_DEST, unit="ms")
+            except Exception as e:
+                logger.debug(f"Ping to {PING_DEST} failed: {e}")
+                delay = None
 
-        save_last_value(delay, cls.last_values_ping,
+        if delay is None or delay is False:
+            delay_int = 0
+        else:
+            delay_int = safe_int(delay)
+
+        save_last_value(delay_int, cls.last_values_ping,
                         theme_data['LINE_GRAPH'].get("HISTORY_SIZE", DEFAULT_HISTORY_SIZE))
-        # logger.debug(f"Ping delay: {delay}ms")
+        # logger.debug(f"Ping delay: {delay_int}ms")
 
-        display_themed_progress_bar(theme_data['GRAPH'], delay)
+        display_themed_progress_bar(theme_data['GRAPH'], delay_int)
         display_themed_radial_bar(
             theme_data=theme_data['RADIAL'],
-            value=int(delay),
+            value=delay_int,
             unit="ms",
             min_size=6
         )
         display_themed_value(
             theme_data=theme_data['TEXT'],
-            value=int(delay),
+            value=delay_int,
             unit="ms",
             min_size=6
         )
